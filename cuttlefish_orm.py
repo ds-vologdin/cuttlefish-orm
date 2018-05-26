@@ -1,14 +1,27 @@
 class Base():
-    ''' Базовый класс cuttlefish_orm'''
+    ''' Базовый класс cuttlefish_orm '''
+    def execute_sql(self, sql):
+        if not self.connection_db:
+            return None
+        cursor_db = self.connection_db.cursor()
+        cursor_db.execute(sql)
+        self.connection_db.commit()
+        return cursor_db.fetchall()
+
     def select_all(self):
+        if not self.connection_db:
+            return None
         field_names = [
             k for k in self.__class__.__dict__.keys() if not k.startswith('__')
         ]
-        print('SELECT %s FROM %s;' % (
+        sql = 'SELECT %s FROM %s;' % (
             ', '.join(field_names), self.__class__.__tablename__
-        ))
+        )
+        print(sql)
+        result = self.execute_sql(sql)
+        return result
 
-    def save(self, connection_db):
+    def save(self):
         # field_names = [
         #     key for key in self.__class__.__dict__.keys()
         #     if not key.startswith('__')
@@ -21,6 +34,8 @@ class Base():
         #     ', '.join(field_names),
         #     ', '.join(field_values)
         # ))
+        if not self.connection_db:
+            return None
         columns = {}
         for key, value in self.__dict__.items():
             columns_type = self.__class__.__dict__.get(key)
@@ -40,9 +55,7 @@ class Base():
             ', '.join(columns.values())
         )
         print(sql)
-        cursor_db = connection_db.cursor()
-        cursor_db.execute(sql)
-        connection_db.commit()
+        self.execute_sql(sql)
 
 
 def is_field_type_db(type_db):
@@ -90,7 +103,7 @@ def create_table(connection_db, class_model):
         if is_field_db(field_name, field_description)
     ]
 
-    sql = 'CREATE TABLE {0} ({1});'.format(
+    sql = 'CREATE TABLE IF NOT EXISTS {0} ({1});'.format(
         class_model.__tablename__, ', '.join(fields)
     )
     print(sql)

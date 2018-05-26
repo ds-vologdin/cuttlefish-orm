@@ -11,16 +11,18 @@ class User(Base):
     id = ('INTEGER', 'PRIMARY KEY AUTOINCREMENT NOT NULL')
     name = ('TEXT', 'NOT NULL')
 
-    def __init__(self, name):
+    def __init__(self, name, connection_db=None):
         self.name = name
+        self.connection_db = connection_db
 
 
 def main():
     conn = sqlite3.connect('example.db')
     create_table(conn, User)
-    user = User('Vasya')
-    user.save(conn)
-
+    user = User('Vasya', conn)
+    user.save()
+    users = User('', conn).select_all()
+    print(users)
 
 if __name__ == '__main__':
     main()
