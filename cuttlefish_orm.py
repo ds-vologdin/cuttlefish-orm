@@ -161,6 +161,13 @@ def get_foreign_keys(fields):
     return foreign_keys
 
 
+def execute_sql(connection_db, sql):
+    logging.debug(sql)
+    cursor_db = connection_db.cursor()
+    cursor_db.execute(sql)
+    connection_db.commit()
+
+
 def create_table(connection_db, class_model):
     if not class_model:
         return None
@@ -186,8 +193,11 @@ def create_table(connection_db, class_model):
             sql, foreign_key[0], foreign_key[1]
             )
     sql = '{});'.format(sql)
+    execute_sql(connection_db, sql)
 
-    logging.debug(sql)
-    cursor_db = connection_db.cursor()
-    cursor_db.execute(sql)
-    connection_db.commit()
+
+def drop_table(connection_db, class_model):
+    if not class_model:
+        return None
+    sql = 'DROP TABLE {};'.format(class_model.__tablename__)
+    execute_sql(connection_db, sql)

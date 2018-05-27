@@ -1,6 +1,6 @@
 import sqlite3
 import logging
-from cuttlefish_orm import Base, create_table
+from cuttlefish_orm import Base, create_table, drop_table
 
 
 class User(Base):
@@ -69,6 +69,8 @@ def main():
     message.save()
     message_record = Message('', '', 0, conn).select_all()
     print(message_record)
+    drop_table(conn, User)
+    drop_table(conn, Message)
 
 
 if __name__ == '__main__':
