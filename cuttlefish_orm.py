@@ -92,10 +92,7 @@ class Base():
         result = self.execute_sql_fetch_one(sql)
         return result
 
-    def save(self):
-        if not self.connection_db:
-            return None
-        fields = self.get_fields_with_value_text()
+    def insert(self, fields):
         if not fields:
             return None
         sql = 'INSERT INTO {0} ({1}) VALUES ({2});'.format(
@@ -104,6 +101,31 @@ class Base():
             ', '.join(fields.values())
         )
         return self.execute_sql(sql)
+
+    def update(self, fields):
+        if not fields:
+            return None
+        update_fields = ''
+        for field, value in fields.items():
+            update_fields += ', {} = {}'.format(field, value)
+
+        sql = 'UPDATE {0} SET {1} WHERE id = 1;'.format(
+            self.__class__.__tablename__,
+            update_fields
+        )
+        return self.execute_sql(sql)
+
+    def save(self):
+        if not self.connection_db:
+            return None
+        fields = self.get_fields_with_value_text()
+        if not fields:
+            return None
+
+        if 'id' not in fields:
+            return self.insert(fields)
+
+        return self.update(fields)
 
 
 # Функции для работы с БД. Может быть их вынести в отдельный модуль?
