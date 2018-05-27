@@ -139,30 +139,51 @@ def is_field_db(field_name, field_description):
     return True
 
 
-def create_table(connection_db, class_model):
-    if not class_model:
-        return None
-
+def get_fields_db_from_class_dict(class_dict):
     class_fields = [
-        item for item in class_model.__dict__.items()
+        item for item in class_dict.items()
         if is_field_db(*item)
     ]
 
     def sort_field_by_column_number(x): return x[1].get('column_number', 1000)
-    class_fields = sorted(class_fields, key=sort_field_by_column_number)
+    return sorted(class_fields, key=sort_field_by_column_number)
+
+
+def get_foreign_keys(fields):
+    foreign_keys = [
+        (field_name, field_description.get('fk'))
+        for field_name, field_description in fields
+        if field_description.get('fk')
+    ]
+    return foreign_keys
+
+
+def create_table(connection_db, class_model):
+    if not class_model:
+        return None
+
+    class_fields_db = get_fields_db_from_class_dict(class_model.__dict__)
 
     fields = [
         '{} {} {}'.format(
             field_name,
             field_description.get('type'),
             field_description.get('options', ''))
-        for field_name, field_description in class_fields
+        for field_name, field_description in class_fields_db
         if is_field_db(field_name, field_description)
     ]
 
-    sql = 'CREATE TABLE IF NOT EXISTS {0} ({1});'.format(
+    sql = 'CREATE TABLE IF NOT EXISTS {0} ({1}'.format(
         class_model.__tablename__, ', '.join(fields)
     )
+    foreign_keys = get_foreign_keys(class_fields_db)
+
+    for foreign_key in foreign_keys:
+        sql = '{}, FOREIGN KEY({}) REFERENCES {}'.format(
+            sql, foreign_key[0], foreign_key[1]
+            )
+    sql = '{});'.format(sql)
+
     print(sql)
     cursor_db = connection_db.cursor()
     cursor_db.execute(sql)
