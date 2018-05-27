@@ -1,4 +1,5 @@
 import sqlite3
+import logging
 from cuttlefish_orm import Base, create_table
 
 
@@ -46,6 +47,11 @@ class Message(Base):
 
 
 def main():
+    logging.basicConfig(
+        filename=None,
+        level=logging.DEBUG,
+        format='%(asctime)s:%(levelname)s:%(message)s'
+    )
     conn = sqlite3.connect('example.db')
     create_table(conn, User)
     create_table(conn, Message)

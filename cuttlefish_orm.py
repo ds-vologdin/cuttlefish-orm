@@ -1,8 +1,12 @@
+import logging
+
+
 class Base():
     ''' Базовый класс cuttlefish_orm '''
     def execute_sql_fetch_all(self, sql):
         if not self.connection_db:
             return None
+        logging.debug(sql)
         cursor_db = self.connection_db.cursor()
         cursor_db.execute(sql)
         return cursor_db.fetchall()
@@ -10,6 +14,7 @@ class Base():
     def execute_sql_fetch_one(self, sql):
         if not self.connection_db:
             return None
+        logging.debug(sql)
         cursor_db = self.connection_db.cursor()
         cursor_db.execute(sql)
         return cursor_db.fetchone()
@@ -17,6 +22,7 @@ class Base():
     def execute_sql(self, sql):
         if not self.connection_db:
             return None
+        logging.debug(sql)
         cursor_db = self.connection_db.cursor()
         cursor_db.execute(sql)
         self.connection_db.commit()
@@ -73,7 +79,6 @@ class Base():
         sql = 'SELECT {} FROM {};'.format(
             ', '.join(field_names), self.__class__.__tablename__
         )
-        print(sql)
         result = self.execute_sql_fetch_all(sql)
         return result
 
@@ -84,7 +89,6 @@ class Base():
         sql = 'SELECT {} FROM {} LIMIT 1;'.format(
             ', '.join(field_names), self.__class__.__tablename__
         )
-        print(sql)
         result = self.execute_sql_fetch_one(sql)
         return result
 
@@ -99,7 +103,6 @@ class Base():
             ', '.join(fields.keys()),
             ', '.join(fields.values())
         )
-        print(sql)
         return self.execute_sql(sql)
 
 
@@ -184,7 +187,7 @@ def create_table(connection_db, class_model):
             )
     sql = '{});'.format(sql)
 
-    print(sql)
+    logging.debug(sql)
     cursor_db = connection_db.cursor()
     cursor_db.execute(sql)
     connection_db.commit()
