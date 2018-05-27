@@ -22,10 +22,13 @@ class Base():
         self.connection_db.commit()
 
     def get_field_names(self):
-        return [
-            key for key in self.__class__.__dict__.keys()
-            if is_correct_field_name(key)
-        ]
+        def sort_field_by_column_number(x):
+            return x[1].get('column_number', 1000)
+        fields = sorted(
+            self.get_fields().items(),
+            key=sort_field_by_column_number
+        )
+        return [field[0] for field in fields]
 
     def get_fields(self):
         class_dict = self.__class__.__dict__
@@ -42,11 +45,11 @@ class Base():
             return None
         if field_name not in fields:
             return None
-        field_type = fields[field_name][0]
+        field_type = fields[field_name].get('type')
         return field_type
 
     def get_field_with_value(self):
-        field_names = self.get_fields().keys()
+        field_names = self.get_field_names()
         fields = {
             field_name: self.__dict__[field_name]
             for field_name in field_names
@@ -115,10 +118,12 @@ def is_correct_field_name(field_name):
 
 
 def is_corret_field_description(field_description):
-    if not len(field_description) == 2:
+    if not isinstance(field_description, dict):
         return False
-    field_type, field_options = field_description
-    if not is_field_type_db(field_type):
+    # type - обязательный ключ
+    if 'type' not in field_description:
+        return False
+    if not is_field_type_db(field_description['type']):
         return False
     return True
 
@@ -138,11 +143,20 @@ def create_table(connection_db, class_model):
     if not class_model:
         return None
 
-    class_fields = class_model.__dict__
+    class_fields = [
+        item for item in class_model.__dict__.items()
+        if is_field_db(*item)
+    ]
+
+    def sort_field_by_column_number(x): return x[1].get('column_number', 1000)
+    class_fields = sorted(class_fields, key=sort_field_by_column_number)
 
     fields = [
-        '{} {}'.format(field_name, ' '.join(field_description))
-        for field_name, field_description in class_fields.items()
+        '{} {} {}'.format(
+            field_name,
+            field_description.get('type'),
+            field_description.get('options', ''))
+        for field_name, field_description in class_fields
         if is_field_db(field_name, field_description)
     ]
 
