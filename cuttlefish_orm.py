@@ -1,63 +1,106 @@
 class Base():
     ''' Базовый класс cuttlefish_orm '''
+    def execute_sql_fetch_all(self, sql):
+        if not self.connection_db:
+            return None
+        cursor_db = self.connection_db.cursor()
+        cursor_db.execute(sql)
+        return cursor_db.fetchall()
+
+    def execute_sql_fetch_one(self, sql):
+        if not self.connection_db:
+            return None
+        cursor_db = self.connection_db.cursor()
+        cursor_db.execute(sql)
+        return cursor_db.fetchone()
+
     def execute_sql(self, sql):
         if not self.connection_db:
             return None
         cursor_db = self.connection_db.cursor()
         cursor_db.execute(sql)
         self.connection_db.commit()
-        return cursor_db.fetchall()
+
+    def get_field_names(self):
+        return [
+            key for key in self.__class__.__dict__.keys()
+            if is_correct_field_name(key)
+        ]
+
+    def get_fields(self):
+        class_dict = self.__class__.__dict__
+        fields = {
+            field_name: field_description
+            for field_name, field_description in class_dict.items()
+            if is_field_db(field_name, field_description)
+        }
+        return fields
+
+    def get_field_type(self, field_name):
+        fields = self.get_fields()
+        if not fields:
+            return None
+        if field_name not in fields:
+            return None
+        field_type = fields[field_name][0]
+        return field_type
+
+    def get_field_with_value(self):
+        field_names = self.get_fields().keys()
+        fields = {
+            field_name: self.__dict__[field_name]
+            for field_name in field_names
+            if field_name in self.__dict__
+        }
+        return fields
+
+    def get_fields_with_value_text(self):
+        fields = self.get_field_with_value()
+        for field_name, value in fields.items():
+            if self.get_field_type(field_name) == 'TEXT':
+                fields[field_name] = '"{}"'.format(value)
+            else:
+                fields[field_name] = '{}'.format(value)
+        return fields
 
     def select_all(self):
         if not self.connection_db:
             return None
-        field_names = [
-            k for k in self.__class__.__dict__.keys() if not k.startswith('__')
-        ]
-        sql = 'SELECT %s FROM %s;' % (
+        field_names = self.get_field_names()
+        sql = 'SELECT {} FROM {};'.format(
             ', '.join(field_names), self.__class__.__tablename__
         )
         print(sql)
-        result = self.execute_sql(sql)
+        result = self.execute_sql_fetch_all(sql)
+        return result
+
+    def select_first(self):
+        if not self.connection_db:
+            return None
+        field_names = self.get_field_names()
+        sql = 'SELECT {} FROM {} LIMIT 1;'.format(
+            ', '.join(field_names), self.__class__.__tablename__
+        )
+        print(sql)
+        result = self.execute_sql_fetch_one(sql)
         return result
 
     def save(self):
-        # field_names = [
-        #     key for key in self.__class__.__dict__.keys()
-        #     if not key.startswith('__')
-        # ]
-        # field_values = [
-        #     self.__dict__.get(field_name, 'None') for field_name in field_names
-        # ]
-        # print('INSERT INTO {0} ({1}) VALUES ({2});'.format(
-        #     self.__class__.__tablename__,
-        #     ', '.join(field_names),
-        #     ', '.join(field_values)
-        # ))
         if not self.connection_db:
             return None
-        columns = {}
-        for key, value in self.__dict__.items():
-            columns_type = self.__class__.__dict__.get(key)
-            if not columns_type:
-                continue
-            if not is_correct_field_name(key):
-                continue
-            if columns_type[0] == "TEXT":
-                columns[key] = '"{}"'.format(value)
-            else:
-                columns[key] = '{}'.format(value)
-        if not columns:
+        fields = self.get_fields_with_value_text()
+        if not fields:
             return None
         sql = 'INSERT INTO {0} ({1}) VALUES ({2});'.format(
             self.__class__.__tablename__,
-            ', '.join(columns.keys()),
-            ', '.join(columns.values())
+            ', '.join(fields.keys()),
+            ', '.join(fields.values())
         )
         print(sql)
-        self.execute_sql(sql)
+        return self.execute_sql(sql)
 
 
+# Функции для работы с БД. Может быть их вынести в отдельный модуль?
 def is_field_type_db(type_db):
     type_db = type_db.upper()
     if type_db in ('INTEGER', 'TEXT', 'BLOB', 'REAL', 'NUMERIC'):

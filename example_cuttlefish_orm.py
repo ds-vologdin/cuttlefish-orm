@@ -21,8 +21,11 @@ def main():
     create_table(conn, User)
     user = User('Vasya', conn)
     user.save()
-    users = User('', conn).select_all()
-    print(users)
+    users_records = User('', conn).select_all()
+    print(users_records)
+    user_record = User('', conn).select_first()
+    print(user_record)
+    print(User('', conn).get_fields())
 
 if __name__ == '__main__':
     main()
