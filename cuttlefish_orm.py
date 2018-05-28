@@ -55,6 +55,7 @@ class BaseFields():
         return fields
 
     def get_field_names(self):
+        # Колонки без column_number помещаем в конец таблицы
         def sort_field_by_column_number(x):
             return x[1].get('column_number', 1000)
         fields = sorted(
@@ -136,8 +137,6 @@ class Base(BaseExecuteSQL, BaseFields):
         return True
 
     def select_all(self):
-        if not self.connection_db:
-            return None
         field_names = self.get_field_names()
         sql = 'SELECT {} FROM {};'.format(
             ', '.join(field_names), self.__class__.__tablename__
@@ -146,8 +145,6 @@ class Base(BaseExecuteSQL, BaseFields):
         return result
 
     def select_first(self):
-        if not self.connection_db:
-            return None
         field_names = self.get_field_names()
         sql = 'SELECT {} FROM {} LIMIT 1;'.format(
             ', '.join(field_names), self.__class__.__tablename__
@@ -156,8 +153,6 @@ class Base(BaseExecuteSQL, BaseFields):
         return result
 
     def insert(self):
-        if not self.connection_db:
-            return None
         fields = self.get_fields_with_value_text()
         if not fields:
             return None
