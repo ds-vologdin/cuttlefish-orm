@@ -72,6 +72,48 @@ class Base():
                 fields[field_name] = '{}'.format(value)
         return fields
 
+    def is_primary_key_field_description(self, field_description):
+        if not field_description:
+            return False
+        if 'options' not in field_description:
+            return False
+        if field_description['options'].upper().find('PRIMARY KEY') < 0:
+            return False
+        return True
+
+    def get_primary_keys(self):
+        fields = self.get_fields()
+        primary_keys = [
+            field_name
+            for field_name, field_description in fields.items()
+            if self.is_primary_key_field_description(field_description)
+        ]
+        return primary_keys
+
+    def is_record_in_db(self):
+        primary_keys = self.get_primary_keys()
+        fields = self.get_fields_with_value_text()
+        primary_keys_values_str = []
+        for primary_key in primary_keys:
+            value = fields.get(primary_key)
+            if not value:
+                # Если есть не заполненные primary key, значит нет смысла
+                # делать запрос в БД
+                return False
+            primary_keys_values_str.append(
+                '{} = {}'.format(
+                    primary_key, fields[primary_key]
+                )
+            )
+        sql = 'SELECT count(*) FROM {} WHERE {};'.format(
+            self.__class__.__tablename__,
+            'AND '.join(primary_keys_values_str)
+        )
+        result = self.execute_sql_fetch_one(sql)
+        if result[0] == 0:
+            return False
+        return True
+
     def select_all(self):
         if not self.connection_db:
             return None
@@ -92,7 +134,10 @@ class Base():
         result = self.execute_sql_fetch_one(sql)
         return result
 
-    def insert(self, fields):
+    def insert(self):
+        if not self.connection_db:
+            return None
+        fields = self.get_fields_with_value_text()
         if not fields:
             return None
         sql = 'INSERT INTO {0} ({1}) VALUES ({2});'.format(
@@ -100,32 +145,48 @@ class Base():
             ', '.join(fields.keys()),
             ', '.join(fields.values())
         )
-        return self.execute_sql(sql)
+        logging.debug(sql)
+        cursor_db = self.connection_db.cursor()
+        cursor_db.execute(sql)
 
-    def update(self, fields):
+        sql = 'SELECT last_insert_rowid();'
+        logging.debug(sql)
+        cursor_db.execute(sql)
+        record = cursor_db.fetchone()
+
+        primary_keys = self.get_primary_keys()
+        # Пока работаем только с 1 ключом
+        # TODO: научить insert работать корректно с несколькими ключами
+        self.__dict__[primary_keys[0]] = record[0]
+
+        self.connection_db.commit()
+        return record
+
+    def update(self):
+        fields = self.get_fields_with_value_text()
         if not fields:
             return None
-        update_fields = ''
+        primary_keys = self.get_primary_keys()
+        update_fields_values_str = []
+        primary_keys_values_str = []
         for field, value in fields.items():
-            update_fields += ', {} = {}'.format(field, value)
-
-        sql = 'UPDATE {0} SET {1} WHERE id = 1;'.format(
+            if field in primary_keys:
+                primary_keys_values_str.append('{} = {}'.format(field, value))
+            else:
+                update_fields_values_str.append('{} = {}'.format(field, value))
+        sql = 'UPDATE {0} SET {1} WHERE {2};'.format(
             self.__class__.__tablename__,
-            update_fields
+            ', '.join(update_fields_values_str),
+            ', '.join(primary_keys_values_str),
         )
         return self.execute_sql(sql)
 
     def save(self):
         if not self.connection_db:
             return None
-        fields = self.get_fields_with_value_text()
-        if not fields:
-            return None
-
-        if 'id' not in fields:
-            return self.insert(fields)
-
-        return self.update(fields)
+        if self.is_record_in_db():
+            return self.update()
+        return self.insert()
 
 
 # Функции для работы с БД. Может быть их вынести в отдельный модуль?

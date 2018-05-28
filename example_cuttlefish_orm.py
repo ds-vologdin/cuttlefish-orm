@@ -14,6 +14,11 @@ class User(Base):
     }
     name = {'type': 'TEXT', 'options': 'NOT NULL', 'column_number': 1}
     email = {'type': 'TEXT', 'options': 'NOT NULL', 'column_number': 2}
+    messages = {
+        'type': 'RELATIONSHIP',
+        'model': 'Message',
+        'back_populates': 'user'
+    }
 
     def __init__(self, name, email, connection_db=None):
         self.name = name
@@ -22,7 +27,7 @@ class User(Base):
 
 
 class Message(Base):
-    __tablename__ = 'articles'
+    __tablename__ = 'messages'
 
     # Допустимые типы данных INTEGER, TEXT, BLOB, REAL, NUMERIC
     id = {
@@ -37,6 +42,11 @@ class Message(Base):
         'options': 'NOT NULL',
         'fk': 'articles(id)',
         'column_number': 3,
+    }
+    user = {
+        'type': 'RELATIONSHIP',
+        'model': 'User',
+        'back_populates': 'messages'
     }
 
     def __init__(self, title, message, user_id, connection_db=None):
@@ -57,6 +67,8 @@ def main():
     create_table(conn, Message)
     user = User('Vasya', 'vasya@mail.ru', conn)
     user.save()
+    user.email = 'vasya@gmail.com'
+    user.save()
     users_records = User('', '', conn).select_all()
     print(users_records)
     user_record = User('', '', conn).select_first()
@@ -69,8 +81,8 @@ def main():
     message.save()
     message_record = Message('', '', 0, conn).select_all()
     print(message_record)
-    drop_table(conn, User)
-    drop_table(conn, Message)
+    # drop_table(conn, User)
+    # drop_table(conn, Message)
 
 
 if __name__ == '__main__':
