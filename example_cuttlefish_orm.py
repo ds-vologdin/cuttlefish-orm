@@ -65,14 +65,23 @@ def main():
     conn = sqlite3.connect('example.db')
     create_table(conn, User)
     create_table(conn, Message)
+
+    # INSERT
     user = User('Vasya', 'vasya@mail.ru', conn)
     user.save()
+    # UPDATE
     user.email = 'vasya@gmail.com'
     user.save()
+
     users_records = User('', '', conn).select_all()
     print(users_records)
     user_record = User('', '', conn).select_first()
     print(user_record)
+    # SELECT with fields
+    fields = ('id', 'email')
+    user_records = User('', '', conn).select_all(fields)
+    print(user_records)
+
     message = Message(
         'Оповещение',
         'Скорее беги в серверную запускать дизель-генератор',

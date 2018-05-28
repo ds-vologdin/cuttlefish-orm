@@ -136,21 +136,31 @@ class Base(BaseExecuteSQL, BaseFields):
             return False
         return True
 
-    def select_all(self):
-        field_names = self.get_field_names()
+    def select_all_with_field_names(self, field_names=None):
+        if not field_names:
+            return None
         sql = 'SELECT {} FROM {};'.format(
             ', '.join(field_names), self.__class__.__tablename__
         )
-        result = self.execute_sql_fetch_all(sql)
-        return result
+        return self.execute_sql_fetch_all(sql)
 
-    def select_first(self):
-        field_names = self.get_field_names()
+    def select_all(self, field_names=None):
+        if not field_names:
+            field_names = self.get_field_names()
+        return self.select_all_with_field_names(field_names)
+
+    def select_first_with_field_names(self, field_names=None):
+        if not field_names:
+            return None
         sql = 'SELECT {} FROM {} LIMIT 1;'.format(
             ', '.join(field_names), self.__class__.__tablename__
         )
-        result = self.execute_sql_fetch_one(sql)
-        return result
+        return self.execute_sql_fetch_one(sql)
+
+    def select_first(self, field_names=None):
+        if not field_names:
+            field_names = self.get_field_names()
+        return self.select_first_with_field_names(field_names)
 
     def insert(self):
         fields = self.get_fields_with_value_text()
