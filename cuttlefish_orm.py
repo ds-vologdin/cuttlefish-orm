@@ -1,8 +1,8 @@
 import logging
 
 
-class Base():
-    ''' Базовый класс cuttlefish_orm '''
+class BaseExecuteSQL():
+    ''' Класс выполнения sql запросов '''
     def execute_sql_fetch_all(self, sql):
         if not self.connection_db:
             return None
@@ -27,15 +27,24 @@ class Base():
         cursor_db.execute(sql)
         self.connection_db.commit()
 
-    def get_field_names(self):
-        def sort_field_by_column_number(x):
-            return x[1].get('column_number', 1000)
-        fields = sorted(
-            self.get_fields().items(),
-            key=sort_field_by_column_number
-        )
-        return [field[0] for field in fields]
+    def execute_sql_insert(self, sql_insert):
+        if not self.connection_db:
+            return None
+        logging.debug(sql_insert)
+        cursor_db = self.connection_db.cursor()
+        cursor_db.execute(sql_insert)
 
+        sql = 'SELECT last_insert_rowid();'
+        logging.debug(sql)
+        cursor_db.execute(sql)
+        record = cursor_db.fetchone()
+
+        self.connection_db.commit()
+        return record
+
+
+class BaseFields():
+    ''' Класс для работы с полями БД '''
     def get_fields(self):
         class_dict = self.__class__.__dict__
         fields = {
@@ -44,6 +53,15 @@ class Base():
             if is_field_db(field_name, field_description)
         }
         return fields
+
+    def get_field_names(self):
+        def sort_field_by_column_number(x):
+            return x[1].get('column_number', 1000)
+        fields = sorted(
+            self.get_fields().items(),
+            key=sort_field_by_column_number
+        )
+        return [field[0] for field in fields]
 
     def get_field_type(self, field_name):
         fields = self.get_fields()
@@ -90,6 +108,9 @@ class Base():
         ]
         return primary_keys
 
+
+class Base(BaseExecuteSQL, BaseFields):
+    ''' Базовый класс cuttlefish_orm '''
     def is_record_in_db(self):
         primary_keys = self.get_primary_keys()
         fields = self.get_fields_with_value_text()
@@ -145,21 +166,13 @@ class Base():
             ', '.join(fields.keys()),
             ', '.join(fields.values())
         )
-        logging.debug(sql)
-        cursor_db = self.connection_db.cursor()
-        cursor_db.execute(sql)
-
-        sql = 'SELECT last_insert_rowid();'
-        logging.debug(sql)
-        cursor_db.execute(sql)
-        record = cursor_db.fetchone()
+        record = self.execute_sql_insert(sql)
 
         primary_keys = self.get_primary_keys()
-        # Пока работаем только с 1 ключом
+        # Сохраняем значение первичного ключа в модели (чаще всего это self.id)
         # TODO: научить insert работать корректно с несколькими ключами
         self.__dict__[primary_keys[0]] = record[0]
 
-        self.connection_db.commit()
         return record
 
     def update(self):
@@ -182,8 +195,6 @@ class Base():
         return self.execute_sql(sql)
 
     def save(self):
-        if not self.connection_db:
-            return None
         if self.is_record_in_db():
             return self.update()
         return self.insert()
