@@ -14,14 +14,19 @@ class User(Base):
     }
     name = {'type': 'TEXT', 'options': 'NOT NULL', 'column_number': 1}
     email = {'type': 'TEXT', 'options': 'NOT NULL', 'column_number': 2}
+    messages = {
+        'type': 'RELATIONSHIP',
+        'model_key': 'Message.id',
+        'local_key': 'id',
+        'module': 'example_cuttlefish_orm',
+        # 'module': __file__[:-3],
+    }
 
     def __init__(self, name='', email='', connection_db=None):
         self.name = name
         self.email = email
         self.connection_db = connection_db
-        self.messages = lambda: self.relationship(
-            'Message.id', 'id', 'example_cuttlefish_orm'
-        )
+        self.init_relationship()
 
 
 class Message(Base):
@@ -41,15 +46,20 @@ class Message(Base):
         'fk': 'articles(id)',
         'column_number': 3,
     }
+    user = {
+        'type': 'RELATIONSHIP',
+        'model_key': 'User.id',
+        'local_key': 'user_id',
+        'module': 'example_cuttlefish_orm',
+        # 'module': __file__[:-3],
+    }
 
     def __init__(self, title='', message='', user_id=None, connection_db=None):
         self.title = title
         self.message = message
         self.user_id = user_id
         self.connection_db = connection_db
-        self.user = lambda: self.relationship(
-            'User.id', 'user_id', 'example_cuttlefish_orm'
-        )
+        self.init_relationship()
 
 
 def main():
@@ -65,25 +75,16 @@ def main():
     # INSERT
     user = User('Vasya', 'vasya@mail.ru', conn)
     user.save()
+
     # UPDATE
     user.email = 'vasya@gmail.com'
     user.save()
 
+    # SELECT
     user_records = User(connection_db=conn).select_all()
     print('select_all:\n{}'.format(user_records))
     user_record = User(connection_db=conn).select_first()
     print('select_first:\n{}'.format(user_record))
-    # SELECT с задаными полями
-    print('='*80)
-    fields = ('id', 'email')
-    user_records = User(connection_db=conn).select_all(fields)
-    print('select_all с заданами параметрами:\n{}'.format(user_records))
-    # filter()
-    print('='*80)
-    user_records = User(connection_db=conn).filter()
-    print('filter (select_all):\n{}'.format(user_records))
-    user_records = User(connection_db=conn).filter('name = "Vasya"')
-    print('filter (select_all):\n{}'.format(user_records))
 
     message = Message(
         'Оповещение',
@@ -92,7 +93,20 @@ def main():
         conn)
     message.save()
     message_record = Message(connection_db=conn).select_all()
-    print(message_record)
+    print('select_all:\n{}'.format(message_record))
+
+    # SELECT с задаными полями
+    print('='*80)
+    fields = ('id', 'email')
+    user_records = User(connection_db=conn).select_all(fields)
+    print('select_all с заданами параметрами:\n{}'.format(user_records))
+
+    # filter()
+    print('='*80)
+    user_records = User(connection_db=conn).filter()
+    print('filter (select_all):\n{}'.format(user_records))
+    user_records = User(connection_db=conn).filter('name = "Vasya"')
+    print('filter (select_all):\n{}'.format(user_records))
 
     # get
     print('='*80)
@@ -111,9 +125,13 @@ def main():
     value_keys_message = (1,)
     message = Message(connection_db=conn).get(value_keys_message)
     print('message.user_id: {}'.format(message.user_id))
+    print(message.__dict__)
     user = message.user()
     print('user.name: {}'.format(user[0].name))
 
+    # drop_table
+    drop_table(conn, User)
+    drop_table(conn, Message)
 
 if __name__ == '__main__':
     main()

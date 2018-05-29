@@ -1,4 +1,5 @@
 import logging
+import sqlite3
 import importlib
 
 
@@ -9,42 +10,62 @@ class BaseExecuteSQL():
             logging.error('connection_db не задано')
             return None
         logging.debug(sql)
-        cursor_db = self.connection_db.cursor()
-        cursor_db.execute(sql)
-        return cursor_db.fetchall()
+        try:
+            cursor_db = self.connection_db.cursor()
+            cursor_db.execute(sql)
+            result = cursor_db.fetchall()
+        except sqlite3.Error as e:
+            logging.error("sqlite3 error: {}".format(e.args[0]))
+            return None
+        return result
 
     def execute_sql_fetch_one(self, sql):
         if not self.connection_db:
             logging.error('connection_db не задано')
             return None
         logging.debug(sql)
-        cursor_db = self.connection_db.cursor()
-        cursor_db.execute(sql)
-        return cursor_db.fetchone()
+        try:
+            cursor_db = self.connection_db.cursor()
+            cursor_db.execute(sql)
+            result = cursor_db.fetchone()
+        except sqlite3.Error as e:
+            logging.error("sqlite3 error: {}".format(e.args[0]))
+            return None
+        return result
 
     def execute_sql(self, sql):
         if not self.connection_db:
             logging.error('connection_db не задано')
             return None
         logging.debug(sql)
-        cursor_db = self.connection_db.cursor()
-        cursor_db.execute(sql)
-        self.connection_db.commit()
+        try:
+            cursor_db = self.connection_db.cursor()
+            cursor_db.execute(sql)
+            self.connection_db.commit()
+        except sqlite3.Error as e:
+            logging.error("sqlite3 error: {}".format(e.args[0]))
 
     def execute_sql_insert(self, sql_insert):
         if not self.connection_db:
             logging.error('connection_db не задано')
             return None
         logging.debug(sql_insert)
-        cursor_db = self.connection_db.cursor()
-        cursor_db.execute(sql_insert)
+        try:
+            cursor_db = self.connection_db.cursor()
+            cursor_db.execute(sql_insert)
+        except sqlite3.Error as e:
+            logging.error("sqlite3 error: {}".format(e.args[0]))
+            return None
 
         sql = 'SELECT last_insert_rowid();'
         logging.debug(sql)
-        cursor_db.execute(sql)
-        record = cursor_db.fetchone()
-
-        self.connection_db.commit()
+        try:
+            cursor_db.execute(sql)
+            record = cursor_db.fetchone()
+            self.connection_db.commit()
+        except sqlite3.Error as e:
+            logging.error("sqlite3 error: {}".format(e.args[0]))
+            return None
         return record
 
 
@@ -119,6 +140,24 @@ class BaseFields():
             if self.is_primary_key_field_description(field_description)
         ]
         return primary_keys
+
+    def is_relation_field(self, field_description):
+        if not field_description:
+            return None
+        if not isinstance(field_description, dict):
+            return False
+        if field_description.get('type') != 'RELATIONSHIP':
+            return None
+        return True
+
+    def get_relationship_fields(self):
+        class_dict = self.__class__.__dict__
+        fields = {
+            field_name: field_description
+            for field_name, field_description in class_dict.items()
+            if self.is_relation_field(field_description)
+        }
+        return fields
 
 
 class Base(BaseExecuteSQL, BaseFields):
@@ -291,7 +330,6 @@ class Base(BaseExecuteSQL, BaseFields):
 
         remote_module_class = self.get_class_from_str(module, remote_model)
 
-        # local_key_value = self.filter('id = 1', [name_local_key])
         local_key_value = self.__dict__.get(name_local_key)
 
         if not local_key_value:
@@ -311,6 +349,16 @@ class Base(BaseExecuteSQL, BaseFields):
             for value in relationship_values
         ]
         return relationship_modles
+
+    def init_relationship(self):
+        fields = self.get_relationship_fields()
+
+        for name, description in fields.items():
+            self.__dict__[name] = lambda: self.relationship(
+                description.get('model_key'),
+                description.get('local_key'),
+                description.get('module'),
+            )
 
 
 # Функции для работы с БД. Может быть их вынести в отдельный модуль?
@@ -370,9 +418,27 @@ def get_foreign_keys(fields):
 
 def execute_sql(connection_db, sql):
     logging.debug(sql)
-    cursor_db = connection_db.cursor()
-    cursor_db.execute(sql)
-    connection_db.commit()
+    try:
+        cursor_db = connection_db.cursor()
+        cursor_db.execute(sql)
+        connection_db.commit()
+    except sqlite3.Error as e:
+        logging.error("sqlite3 error: {}".format(e.args[0]))
+        return False
+    return True
+
+
+def get_fields_for_create_table(class_fields):
+    if not class_fields:
+        return None
+    return [
+        '{} {} {}'.format(
+            field_name,
+            field_description.get('type'),
+            field_description.get('options', ''))
+        for field_name, field_description in class_fields
+        if is_field_db(field_name, field_description)
+    ]
 
 
 def create_table(connection_db, class_model):
@@ -380,15 +446,29 @@ def create_table(connection_db, class_model):
         return None
 
     class_fields_db = get_fields_db_from_class_dict(class_model.__dict__)
+    fields = get_fields_for_create_table(class_fields_db)
 
-    fields = [
-        '{} {} {}'.format(
-            field_name,
-            field_description.get('type'),
-            field_description.get('options', ''))
-        for field_name, field_description in class_fields_db
-        if is_field_db(field_name, field_description)
-    ]
+    sql = 'CREATE TABLE {0} ({1}'.format(
+        class_model.__tablename__, ', '.join(fields)
+    )
+
+    foreign_keys = get_foreign_keys(class_fields_db)
+
+    for foreign_key in foreign_keys:
+        sql = '{}, FOREIGN KEY({}) REFERENCES {}'.format(
+            sql, foreign_key[0], foreign_key[1]
+            )
+    sql = '{});'.format(sql)
+
+    return execute_sql(connection_db, sql)
+
+
+def create_table_if_not_exist(connection_db, class_model):
+    if not class_model:
+        return None
+
+    class_fields_db = get_fields_db_from_class_dict(class_model.__dict__)
+    fields = get_fields_for_create_table(class_fields_db)
 
     sql = 'CREATE TABLE IF NOT EXISTS {0} ({1}'.format(
         class_model.__tablename__, ', '.join(fields)
@@ -400,7 +480,7 @@ def create_table(connection_db, class_model):
             sql, foreign_key[0], foreign_key[1]
             )
     sql = '{});'.format(sql)
-    execute_sql(connection_db, sql)
+    return execute_sql(connection_db, sql)
 
 
 def drop_table(connection_db, class_model):
