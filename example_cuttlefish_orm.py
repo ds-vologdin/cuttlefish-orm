@@ -20,7 +20,7 @@ class User(Base):
         'back_populates': 'user',
     }
 
-    def __init__(self, name, email, connection_db=None):
+    def __init__(self, name='', email='', connection_db=None):
         self.name = name
         self.email = email
         self.connection_db = connection_db
@@ -49,7 +49,7 @@ class Message(Base):
         'back_populates': 'messages',
     }
 
-    def __init__(self, title, message, user_id, connection_db=None):
+    def __init__(self, title='', message='', user_id=None, connection_db=None):
         self.title = title
         self.message = message
         self.user_id = user_id
@@ -73,14 +73,19 @@ def main():
     user.email = 'vasya@gmail.com'
     user.save()
 
-    users_records = User('', '', conn).select_all()
-    print(users_records)
+    user_records = User('', '', conn).select_all()
+    print('select_all:\n{}'.format(user_records))
     user_record = User('', '', conn).select_first()
-    print(user_record)
+    print('select_first:\n{}'.format(user_record))
     # SELECT с задаными полями
     fields = ('id', 'email')
     user_records = User('', '', conn).select_all(fields)
-    print(user_records)
+    print('select_all с заданами параметрами:\n{}'.format(user_records))
+    # filter()
+    user_records = User('', '', conn).filter()
+    print('filter (select_all):\n{}'.format(user_records))
+    user_records = User('', '', conn).filter('name = "Vasya"')
+    print('filter (select_all):\n{}'.format(user_records))
 
     message = Message(
         'Оповещение',
@@ -95,6 +100,11 @@ def main():
     keys_value = (1,)
     user = User('', '', conn).get(keys_value)
     print(user.name)
+
+    # relationship
+    messages = user.relationship('Message.id', 'id', __file__[:-3])
+    for message in messages:
+        print(message.title)
 
     # drop_table(conn, User)
     # drop_table(conn, Message)

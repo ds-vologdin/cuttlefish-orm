@@ -1,4 +1,5 @@
 import logging
+import importlib
 
 
 class BaseExecuteSQL():
@@ -139,8 +140,8 @@ class Base(BaseExecuteSQL, BaseFields):
             ','.join(primary_keys_values_str)
         )
         values = self.execute_sql_fetch_one(sql)
-        self.set_values(values)
-        return self
+
+        return self.set_values(values)
 
     def set_values(self, values):
         field_names = self.get_field_names()
@@ -149,6 +150,7 @@ class Base(BaseExecuteSQL, BaseFields):
             return None
         for i in range(len(field_names)):
             self.__dict__[field_names[i]] = values[i]
+        return self
 
     def is_record_in_db(self):
         primary_keys = self.get_primary_keys()
@@ -244,6 +246,59 @@ class Base(BaseExecuteSQL, BaseFields):
         if self.is_record_in_db():
             return self.update()
         return self.insert()
+
+    def filter(self, filter_str=None):
+        if not filter_str:
+            return self.select_all()
+        field_names = self.get_field_names()
+
+        sql = 'SELECT {} FROM {} WHERE {};'.format(
+            ', '.join(field_names),
+            self.__class__.__tablename__,
+            filter_str
+        )
+        return self.execute_sql_fetch_all(sql)
+
+    def parse_name_model_key(self, name_model_key):
+        # name_model_key 'ClassName.field'
+        if not name_model_key:
+            return None
+        model_key = name_model_key.split('.')
+        if len(model_key) != 2:
+            logging.error('Base.parse_name_model_key: len(model_key) != 2')
+            return None
+        return model_key
+
+    def relationship(self, name_remote_model_key, name_local_key, module):
+        # name_remote_model_key 'ClassName.field'
+        if not name_remote_model_key:
+            return None
+        remote_model_key = self.parse_name_model_key(name_remote_model_key)
+        if not remote_model_key:
+            return None
+        remote_model, remote_key = remote_model_key
+        # remote_model = '{}.{}'.format(module, remote_model)
+        somemodule = importlib.import_module(module)
+        remote_module_class = getattr(somemodule, remote_model)
+
+        local_key_value = self.select_first_with_field_names([name_local_key])
+        if not local_key_value:
+            return None
+        local_key_value = local_key_value[0]
+
+        # нужен filter()
+        # relationship_values = \
+        #     remote_module_class(connection_db=self.connection_db).select_all()
+        relationship_values = \
+            remote_module_class(connection_db=self.connection_db).filter(
+                '{} = {}'.format(name_local_key, local_key_value)
+            )
+
+        relationship_modles = [
+            remote_module_class().set_values(value)
+            for value in relationship_values
+        ]
+        return relationship_modles
 
 
 # relation!!!
