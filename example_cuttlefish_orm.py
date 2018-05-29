@@ -17,7 +17,7 @@ class User(Base):
     messages = {
         'type': 'RELATIONSHIP',
         'model': 'Message',
-        'back_populates': 'user'
+        'back_populates': 'user',
     }
 
     def __init__(self, name, email, connection_db=None):
@@ -33,7 +33,7 @@ class Message(Base):
     id = {
         'type': 'INTEGER',
         'options': 'PRIMARY KEY AUTOINCREMENT NOT NULL',
-        'column_number': 0
+        'column_number': 0,
     }
     title = {'type': 'TEXT', 'options': 'NOT NULL', 'column_number': 1}
     message = {'type': 'TEXT', 'column_number': 2}
@@ -46,7 +46,7 @@ class Message(Base):
     user = {
         'type': 'RELATIONSHIP',
         'model': 'User',
-        'back_populates': 'messages'
+        'back_populates': 'messages',
     }
 
     def __init__(self, title, message, user_id, connection_db=None):
@@ -77,7 +77,7 @@ def main():
     print(users_records)
     user_record = User('', '', conn).select_first()
     print(user_record)
-    # SELECT with fields
+    # SELECT с задаными полями
     fields = ('id', 'email')
     user_records = User('', '', conn).select_all(fields)
     print(user_records)
@@ -90,6 +90,12 @@ def main():
     message.save()
     message_record = Message('', '', 0, conn).select_all()
     print(message_record)
+
+    # get
+    keys_value = (1,)
+    user = User('', '', conn).get(keys_value)
+    print(user.name)
+
     # drop_table(conn, User)
     # drop_table(conn, Message)
 

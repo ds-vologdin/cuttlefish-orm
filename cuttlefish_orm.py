@@ -102,9 +102,15 @@ class BaseFields():
 
     def get_primary_keys(self):
         fields = self.get_fields()
+
+        def sort_field_by_column_number(x):
+            return x[1].get('column_number', 1000)
         primary_keys = [
             field_name
-            for field_name, field_description in fields.items()
+            for field_name, field_description in sorted(
+                fields.items(),
+                key=sort_field_by_column_number
+            )
             if self.is_primary_key_field_description(field_description)
         ]
         return primary_keys
@@ -112,6 +118,38 @@ class BaseFields():
 
 class Base(BaseExecuteSQL, BaseFields):
     ''' Базовый класс cuttlefish_orm '''
+    def get(self, keys_value):
+        # keys_value = (key1_value, key2_value, ...)
+        primary_keys = self.get_primary_keys()
+
+        if len(keys_value) != len(primary_keys):
+            logging.error('Base.get(): len(keys_value) != len(primary_keys)')
+            return None
+
+        primary_keys_values_str = [
+            '{} = {}'.format(primary_keys[i], keys_value[i])
+            for i in range(len(primary_keys))
+        ]
+
+        field_names = self.get_field_names()
+
+        sql = 'SELECT {} FROM {} WHERE {};'.format(
+            ', '.join(field_names),
+            self.__class__.__tablename__,
+            ','.join(primary_keys_values_str)
+        )
+        values = self.execute_sql_fetch_one(sql)
+        self.set_values(values)
+        return self
+
+    def set_values(self, values):
+        field_names = self.get_field_names()
+        if len(field_names) != len(values):
+            logging.error('Base.set_record: len(field_names) != len(values)')
+            return None
+        for i in range(len(field_names)):
+            self.__dict__[field_names[i]] = values[i]
+
     def is_record_in_db(self):
         primary_keys = self.get_primary_keys()
         fields = self.get_fields_with_value_text()
@@ -174,9 +212,12 @@ class Base(BaseExecuteSQL, BaseFields):
         record = self.execute_sql_insert(sql)
 
         primary_keys = self.get_primary_keys()
-        # Сохраняем значение первичного ключа в модели (чаще всего это self.id)
-        # TODO: научить insert работать корректно с несколькими ключами
-        self.__dict__[primary_keys[0]] = record[0]
+        # Сохраняем значение первичных ключей в модели (чаще всего это self.id)
+        if len(primary_keys) != len(record):
+            logging.error('Base.insert: len(primary_keys) != len(record)')
+            return None
+        for i in range(len(primary_keys)):
+            self.__dict__[primary_keys[i]] = record[i]
 
         return record
 
@@ -203,6 +244,18 @@ class Base(BaseExecuteSQL, BaseFields):
         if self.is_record_in_db():
             return self.update()
         return self.insert()
+
+
+# relation!!!
+def relationship(model_name, conn):
+    if not model_name:
+        return None
+    try:
+        Model = eval(model_name)
+    except:
+        logging.error('class "{}" not found...'.format(model_name))
+        return None
+    return Model('', '', conn).select_first()
 
 
 # Функции для работы с БД. Может быть их вынести в отдельный модуль?
