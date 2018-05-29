@@ -141,7 +141,7 @@ class BaseFields():
         ]
         return primary_keys
 
-    def is_relation_field(self, field_description):
+    def is_relationship_field(self, field_description):
         if not field_description:
             return None
         if not isinstance(field_description, dict):
@@ -155,7 +155,7 @@ class BaseFields():
         fields = {
             field_name: field_description
             for field_name, field_description in class_dict.items()
-            if self.is_relation_field(field_description)
+            if self.is_relationship_field(field_description)
         }
         return fields
 
