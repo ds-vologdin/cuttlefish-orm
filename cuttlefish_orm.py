@@ -6,6 +6,7 @@ class BaseExecuteSQL():
     ''' Класс выполнения sql запросов '''
     def execute_sql_fetch_all(self, sql):
         if not self.connection_db:
+            logging.error('connection_db не задано')
             return None
         logging.debug(sql)
         cursor_db = self.connection_db.cursor()
@@ -14,6 +15,7 @@ class BaseExecuteSQL():
 
     def execute_sql_fetch_one(self, sql):
         if not self.connection_db:
+            logging.error('connection_db не задано')
             return None
         logging.debug(sql)
         cursor_db = self.connection_db.cursor()
@@ -22,6 +24,7 @@ class BaseExecuteSQL():
 
     def execute_sql(self, sql):
         if not self.connection_db:
+            logging.error('connection_db не задано')
             return None
         logging.debug(sql)
         cursor_db = self.connection_db.cursor()
@@ -30,6 +33,7 @@ class BaseExecuteSQL():
 
     def execute_sql_insert(self, sql_insert):
         if not self.connection_db:
+            logging.error('connection_db не задано')
             return None
         logging.debug(sql_insert)
         cursor_db = self.connection_db.cursor()
@@ -247,10 +251,11 @@ class Base(BaseExecuteSQL, BaseFields):
             return self.update()
         return self.insert()
 
-    def filter(self, filter_str=None):
+    def filter(self, filter_str=None, field_names=None):
         if not filter_str:
-            return self.select_all()
-        field_names = self.get_field_names()
+            return self.select_all(field_names)
+        if not field_names:
+            field_names = self.get_field_names()
 
         sql = 'SELECT {} FROM {} WHERE {};'.format(
             ', '.join(field_names),
@@ -269,48 +274,43 @@ class Base(BaseExecuteSQL, BaseFields):
             return None
         return model_key
 
+    def get_class_from_str(self, module, name_class):
+        somemodule = importlib.import_module(module)
+        return getattr(somemodule, name_class)
+
     def relationship(self, name_remote_model_key, name_local_key, module):
         # name_remote_model_key 'ClassName.field'
         if not name_remote_model_key:
             return None
+
         remote_model_key = self.parse_name_model_key(name_remote_model_key)
         if not remote_model_key:
             return None
-        remote_model, remote_key = remote_model_key
-        # remote_model = '{}.{}'.format(module, remote_model)
-        somemodule = importlib.import_module(module)
-        remote_module_class = getattr(somemodule, remote_model)
 
-        local_key_value = self.select_first_with_field_names([name_local_key])
+        remote_model, remote_key = remote_model_key
+
+        remote_module_class = self.get_class_from_str(module, remote_model)
+
+        # local_key_value = self.filter('id = 1', [name_local_key])
+        local_key_value = self.__dict__.get(name_local_key)
+
         if not local_key_value:
             return None
-        local_key_value = local_key_value[0]
 
-        # нужен filter()
-        # relationship_values = \
-        #     remote_module_class(connection_db=self.connection_db).select_all()
+        local_key_value = local_key_value
+
         relationship_values = \
             remote_module_class(connection_db=self.connection_db).filter(
-                '{} = {}'.format(name_local_key, local_key_value)
+                '{} = {}'.format(remote_key, local_key_value)
             )
 
         relationship_modles = [
-            remote_module_class().set_values(value)
+            remote_module_class(connection_db=self.connection_db).set_values(
+                value
+            )
             for value in relationship_values
         ]
         return relationship_modles
-
-
-# relation!!!
-def relationship(model_name, conn):
-    if not model_name:
-        return None
-    try:
-        Model = eval(model_name)
-    except:
-        logging.error('class "{}" not found...'.format(model_name))
-        return None
-    return Model('', '', conn).select_first()
 
 
 # Функции для работы с БД. Может быть их вынести в отдельный модуль?
