@@ -9,7 +9,7 @@ def catch_sqlite3_exceptions(function):
             res = function(*args, **kwargs)
         except sqlite3.Error as e:
             logger.error("sqlite3 error: {}".format(e.args[0]))
-            return None
+            return
         return res
     return wrapper
 
@@ -79,7 +79,7 @@ def execute_sql(connection_db, sql):
 
 def get_fields_for_create_table(class_fields):
     if not class_fields:
-        return None
+        return
     return [
         '{} {} {}'.format(
             field_name,
@@ -92,7 +92,7 @@ def get_fields_for_create_table(class_fields):
 
 def create_table(connection_db, class_model):
     if not class_model:
-        return None
+        return
 
     class_fields_db = get_fields_db_from_class_dict(class_model.__dict__)
     fields = get_fields_for_create_table(class_fields_db)
@@ -114,7 +114,7 @@ def create_table(connection_db, class_model):
 
 def create_table_if_not_exist(connection_db, class_model):
     if not class_model:
-        return None
+        return
 
     class_fields_db = get_fields_db_from_class_dict(class_model.__dict__)
     fields = get_fields_for_create_table(class_fields_db)
@@ -134,6 +134,6 @@ def create_table_if_not_exist(connection_db, class_model):
 
 def drop_table(connection_db, class_model):
     if not class_model:
-        return None
+        return
     sql = 'DROP TABLE {};'.format(class_model.__tablename__)
     execute_sql(connection_db, sql)

@@ -14,11 +14,9 @@ class BaseFields():
 
     def get_field_names(self):
         # Колонки без column_number помещаем в конец таблицы
-        def sort_field_by_column_number(x):
-            return x[1].get('column_number', 1000)
         fields = sorted(
             self.get_fields().items(),
-            key=sort_field_by_column_number
+            key=lambda x: x[1].get('column_number', 1000)
         )
         return [field[0] for field in fields]
 
@@ -60,14 +58,11 @@ class BaseFields():
 
     def get_primary_keys(self):
         fields = self.get_fields()
-
-        def sort_field_by_column_number(x):
-            return x[1].get('column_number', 1000)
         primary_keys = [
             field_name
             for field_name, field_description in sorted(
                 fields.items(),
-                key=sort_field_by_column_number
+                key=lambda x: x[1].get('column_number', 1000)
             )
             if self.is_primary_key_field_description(field_description)
         ]
