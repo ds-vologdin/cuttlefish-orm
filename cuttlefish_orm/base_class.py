@@ -1,8 +1,8 @@
 import importlib
-import logging
 
 from cuttlefish_orm.base_class_execute_sql import BaseExecuteSQL
 from cuttlefish_orm.base_class_fields import BaseFields
+from cuttlefish_orm.logger import logger
 
 
 class Base(BaseExecuteSQL, BaseFields):
@@ -12,7 +12,7 @@ class Base(BaseExecuteSQL, BaseFields):
         primary_keys = self.get_primary_keys()
 
         if len(keys_value) != len(primary_keys):
-            logging.error('Base.get(): len(keys_value) != len(primary_keys)')
+            logger.error('Base.get(): len(keys_value) != len(primary_keys)')
             return None
 
         primary_keys_values_str = [
@@ -34,7 +34,7 @@ class Base(BaseExecuteSQL, BaseFields):
     def set_values(self, values):
         field_names = self.get_field_names()
         if len(field_names) != len(values):
-            logging.error('Base.set_record: len(field_names) != len(values)')
+            logger.error('Base.set_record: len(field_names) != len(values)')
             return None
         for i in range(len(field_names)):
             self.__dict__[field_names[i]] = values[i]
@@ -104,7 +104,7 @@ class Base(BaseExecuteSQL, BaseFields):
         primary_keys = self.get_primary_keys()
         # Сохраняем значение первичных ключей в модели (чаще всего это self.id)
         if len(primary_keys) != len(record):
-            logging.error('Base.insert: len(primary_keys) != len(record)')
+            logger.error('Base.insert: len(primary_keys) != len(record)')
             return None
         for i in range(len(primary_keys)):
             self.__dict__[primary_keys[i]] = record[i]
@@ -154,7 +154,7 @@ class Base(BaseExecuteSQL, BaseFields):
             return None
         model_key = name_model_key.split('.')
         if len(model_key) != 2:
-            logging.error('Base.parse_name_model_key: len(model_key) != 2')
+            logger.error('Base.parse_name_model_key: len(model_key) != 2')
             return None
         return model_key
 

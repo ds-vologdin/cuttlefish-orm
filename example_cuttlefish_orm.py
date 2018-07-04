@@ -1,6 +1,6 @@
 import sqlite3
 import logging
-from cuttlefish_orm.cuttlefish_orm import Base
+from cuttlefish_orm.base_class import Base
 from cuttlefish_orm.db_commands import create_table, drop_table
 
 

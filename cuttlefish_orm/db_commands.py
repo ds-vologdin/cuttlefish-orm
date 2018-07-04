@@ -1,5 +1,6 @@
-import logging
 import sqlite3
+
+from cuttlefish_orm.logger import logger
 
 
 def is_field_type_db(type_db):
@@ -57,13 +58,13 @@ def get_foreign_keys(fields):
 
 
 def execute_sql(connection_db, sql):
-    logging.debug(sql)
+    logger.debug(sql)
     try:
         cursor_db = connection_db.cursor()
         cursor_db.execute(sql)
         connection_db.commit()
     except sqlite3.Error as e:
-        logging.error("sqlite3 error: {}".format(e.args[0]))
+        logger.error("sqlite3 error: {}".format(e.args[0]))
         return False
     return True
 
