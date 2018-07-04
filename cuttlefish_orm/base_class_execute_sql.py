@@ -1,69 +1,46 @@
-import sqlite3
-
 from cuttlefish_orm.logger import logger
+from cuttlefish_orm.db_commands import catch_sqlite3_exceptions
 
 
 class BaseExecuteSQL():
     ''' Класс выполнения sql запросов '''
+
+    def _execute_sql_without_commit(self, sql):
+        ''' Возвращает курсор БД '''
+        if not self.connection_db:
+            logger.error('connection_db не задано')
+            return None
+        logger.debug(sql)
+        cursor_db = self.connection_db.cursor()
+        cursor_db.execute(sql)
+        return cursor_db
+
+    @catch_sqlite3_exceptions
     def execute_sql_fetch_all(self, sql):
-        if not self.connection_db:
-            logger.error('connection_db не задано')
-            return None
-        logger.debug(sql)
-        try:
-            cursor_db = self.connection_db.cursor()
-            cursor_db.execute(sql)
-            result = cursor_db.fetchall()
-        except sqlite3.Error as e:
-            logger.error("sqlite3 error: {}".format(e.args[0]))
-            return None
-        return result
+        cursor_db = self._execute_sql_without_commit(sql)
+        return cursor_db.fetchall() if cursor_db else None
 
+    @catch_sqlite3_exceptions
     def execute_sql_fetch_one(self, sql):
-        if not self.connection_db:
-            logger.error('connection_db не задано')
-            return None
-        logger.debug(sql)
-        try:
-            cursor_db = self.connection_db.cursor()
-            cursor_db.execute(sql)
-            result = cursor_db.fetchone()
-        except sqlite3.Error as e:
-            logger.error("sqlite3 error: {}".format(e.args[0]))
-            return None
-        return result
+        cursor_db = self._execute_sql_without_commit(sql)
+        return cursor_db.fetchone() if cursor_db else None
 
-    def execute_sql(self, sql):
-        if not self.connection_db:
-            logger.error('connection_db не задано')
-            return None
-        logger.debug(sql)
-        try:
-            cursor_db = self.connection_db.cursor()
-            cursor_db.execute(sql)
+    @catch_sqlite3_exceptions
+    def execute_sql(self, sql, commit=True):
+        cursor_db = self._execute_sql_without_commit(sql)
+        if cursor_db and commit:
             self.connection_db.commit()
-        except sqlite3.Error as e:
-            logger.error("sqlite3 error: {}".format(e.args[0]))
 
+    @catch_sqlite3_exceptions
     def execute_sql_insert(self, sql_insert):
-        if not self.connection_db:
-            logger.error('connection_db не задано')
-            return None
-        logger.debug(sql_insert)
-        try:
-            cursor_db = self.connection_db.cursor()
-            cursor_db.execute(sql_insert)
-        except sqlite3.Error as e:
-            logger.error("sqlite3 error: {}".format(e.args[0]))
+        cursor_db = self._execute_sql_without_commit(sql_insert)
+        if not cursor_db:
             return None
 
         sql = 'SELECT last_insert_rowid();'
         logger.debug(sql)
-        try:
-            cursor_db.execute(sql)
-            record = cursor_db.fetchone()
-            self.connection_db.commit()
-        except sqlite3.Error as e:
-            logger.error("sqlite3 error: {}".format(e.args[0]))
-            return None
+
+        cursor_db.execute(sql)
+        record = cursor_db.fetchone()
+        self.connection_db.commit()
         return record

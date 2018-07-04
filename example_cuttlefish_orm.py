@@ -128,6 +128,9 @@ def main():
     user = message.user()
     print('user.name: {}'.format(user[0].name))
 
+    # exception
+    user[0].execute_sql_fetch_one('SELECT * FROM table;')
+
     # drop_table
     drop_table(conn, User)
     drop_table(conn, Message)
