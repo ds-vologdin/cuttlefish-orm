@@ -13,7 +13,7 @@ class Base(BaseExecuteSQL, BaseFields):
 
         if len(keys_value) != len(primary_keys):
             logger.error('Base.get(): len(keys_value) != len(primary_keys)')
-            return None
+            return
 
         primary_keys_values_str = [
             '{} = {}'.format(primary_keys[i], keys_value[i])
@@ -35,7 +35,7 @@ class Base(BaseExecuteSQL, BaseFields):
         field_names = self.get_field_names()
         if len(field_names) != len(values):
             logger.error('Base.set_record: len(field_names) != len(values)')
-            return None
+            return
         for i in range(len(field_names)):
             self.__dict__[field_names[i]] = values[i]
         return self
@@ -66,7 +66,7 @@ class Base(BaseExecuteSQL, BaseFields):
 
     def select_all_with_field_names(self, field_names=None):
         if not field_names:
-            return None
+            return
         sql = 'SELECT {} FROM {};'.format(
             ', '.join(field_names), self.__class__.__tablename__
         )
@@ -79,7 +79,7 @@ class Base(BaseExecuteSQL, BaseFields):
 
     def select_first_with_field_names(self, field_names=None):
         if not field_names:
-            return None
+            return
         sql = 'SELECT {} FROM {} LIMIT 1;'.format(
             ', '.join(field_names), self.__class__.__tablename__
         )
@@ -93,7 +93,7 @@ class Base(BaseExecuteSQL, BaseFields):
     def insert(self):
         fields = self.get_fields_with_value_text()
         if not fields:
-            return None
+            return
         sql = 'INSERT INTO {0} ({1}) VALUES ({2});'.format(
             self.__class__.__tablename__,
             ', '.join(fields.keys()),
@@ -105,7 +105,7 @@ class Base(BaseExecuteSQL, BaseFields):
         # Сохраняем значение первичных ключей в модели (чаще всего это self.id)
         if len(primary_keys) != len(record):
             logger.error('Base.insert: len(primary_keys) != len(record)')
-            return None
+            return
         for i in range(len(primary_keys)):
             self.__dict__[primary_keys[i]] = record[i]
 
@@ -114,7 +114,7 @@ class Base(BaseExecuteSQL, BaseFields):
     def update(self):
         fields = self.get_fields_with_value_text()
         if not fields:
-            return None
+            return
         primary_keys = self.get_primary_keys()
         update_fields_values_str = []
         primary_keys_values_str = []
@@ -151,11 +151,11 @@ class Base(BaseExecuteSQL, BaseFields):
     def parse_name_model_key(self, name_model_key):
         # name_model_key 'ClassName.field'
         if not name_model_key:
-            return None
+            return
         model_key = name_model_key.split('.')
         if len(model_key) != 2:
             logger.error('Base.parse_name_model_key: len(model_key) != 2')
-            return None
+            return
         return model_key
 
     def get_class_from_str(self, module, name_class):
@@ -165,11 +165,11 @@ class Base(BaseExecuteSQL, BaseFields):
     def relationship(self, name_remote_model_key, name_local_key, module):
         # name_remote_model_key 'ClassName.field'
         if not name_remote_model_key:
-            return None
+            return
 
         remote_model_key = self.parse_name_model_key(name_remote_model_key)
         if not remote_model_key:
-            return None
+            return
 
         remote_model, remote_key = remote_model_key
 
@@ -178,7 +178,7 @@ class Base(BaseExecuteSQL, BaseFields):
         local_key_value = self.__dict__.get(name_local_key)
 
         if not local_key_value:
-            return None
+            return
 
         local_key_value = local_key_value
 

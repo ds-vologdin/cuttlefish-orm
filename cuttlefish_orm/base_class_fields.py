@@ -23,9 +23,9 @@ class BaseFields():
     def get_field_type(self, field_name):
         fields = self.get_fields()
         if not fields:
-            return None
+            return
         if field_name not in fields:
-            return None
+            return
         field_type = fields[field_name].get('type')
         return field_type
 
@@ -70,11 +70,11 @@ class BaseFields():
 
     def is_relationship_field(self, field_description):
         if not field_description:
-            return None
+            return
         if not isinstance(field_description, dict):
             return False
         if field_description.get('type') != 'RELATIONSHIP':
-            return None
+            return
         return True
 
     def get_relationship_fields(self):
