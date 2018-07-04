@@ -20,7 +20,6 @@ class User(Base):
         'model_key': 'Message.id',
         'local_key': 'id',
         'module': 'example_cuttlefish_orm',
-        # 'module': __file__[:-3],
     }
 
     def __init__(self, name='', email='', connection_db=None):
@@ -52,7 +51,6 @@ class Message(Base):
         'model_key': 'User.id',
         'local_key': 'user_id',
         'module': 'example_cuttlefish_orm',
-        # 'module': __file__[:-3],
     }
 
     def __init__(self, title='', message='', user_id=None, connection_db=None):

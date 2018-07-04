@@ -8,7 +8,7 @@ from cuttlefish_orm.logger import logger
 class Base(BaseExecuteSQL, BaseFields):
     ''' Базовый класс cuttlefish_orm '''
     def get(self, keys_value):
-        # keys_value = (key1_value, key2_value, ...)
+        ''' keys_value = (key1_value, key2_value, ...) '''
         primary_keys = self.get_primary_keys()
 
         if len(keys_value) != len(primary_keys):
@@ -60,7 +60,7 @@ class Base(BaseExecuteSQL, BaseFields):
             'AND '.join(primary_keys_values_str)
         )
         result = self.execute_sql_fetch_one(sql)
-        if result[0] == 0:
+        if not result[0]:
             return False
         return True
 
@@ -182,8 +182,9 @@ class Base(BaseExecuteSQL, BaseFields):
 
         local_key_value = local_key_value
 
-        relationship_values = \
-            remote_module_class(connection_db=self.connection_db).filter(
+        relationship_values = remote_module_class(
+            connection_db=self.connection_db
+            ).filter(
                 '{} = {}'.format(remote_key, local_key_value)
             )
 
