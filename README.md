@@ -14,7 +14,7 @@ git clone https://github.com/ds-vologdin/cuttlefish-orm.git
 ## Использование
 Пример использования приведён в [example_cuttlefish_orm.py](https://github.com/ds-vologdin/cuttlefish-orm/blob/master/example_cuttlefish_orm.py)
 
-Для начала имортируем модуль cuttlefish_orm и 
+Для начала имортируем модуль cuttlefish_orm и
 ```
 from cuttlefish_orm import Base, create_table, drop_table
 ```
@@ -35,9 +35,8 @@ class User(Base):
     messages = {
         'type': 'RELATIONSHIP',
         'model_key': 'Message.id',
-        'local_key': 'id',
+        'local_key': 'User.id',
         'module': 'example_cuttlefish_orm',
-        # 'module': __file__[:-3],
     }
 
     def __init__(self, name='', email='', connection_db=None):
@@ -108,9 +107,9 @@ print('user.name: {}'.format(user.name))
 value_keys_message задаются в порядке их приоритета, заданного в модели как ```column_number```.
 
 ### Работа с relationship
-При обращении к полю relationship будет получен результат в виде списка экземпляров класса связанной модели. На самом деле это поле представляет из себя lambda функцию, поэтому вызывать его надо соответсвующе (как функцию - со скобочками)
+При обращении к полю relationship будет получен результат в виде списка экземпляров класса связанной модели.
 ```
-messages = user.messages()
+messages = user.messages
 for message in messages:
     print(message.title)
 ```
