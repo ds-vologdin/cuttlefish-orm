@@ -148,8 +148,9 @@ class Base(BaseExecuteSQL, BaseFields):
         )
         return self.execute_sql_fetch_all(sql)
 
-    def parse_name_model_key(self, name_model_key):
-        # name_model_key 'ClassName.field'
+    @staticmethod
+    def parse_name_model_key(name_model_key):
+        ''' name_model_key = 'ClassName.field' '''
         if not name_model_key:
             return
         model_key = name_model_key.split('.')
@@ -158,12 +159,16 @@ class Base(BaseExecuteSQL, BaseFields):
             return
         return model_key
 
-    def get_class_from_str(self, module, name_class):
+    @staticmethod
+    def get_class_from_str(module, name_class):
         somemodule = importlib.import_module(module)
         return getattr(somemodule, name_class)
 
     def relationship(self, name_remote_model_key, name_local_key, module):
-        # name_remote_model_key 'ClassName.field'
+        ''' name_remote_model_key = 'ClassName.field'
+            name_local_key = field_id
+            module = имя модуля, где располагается ClassName
+        '''
         if not name_remote_model_key:
             return
 
@@ -172,9 +177,7 @@ class Base(BaseExecuteSQL, BaseFields):
             return
 
         remote_model, remote_key = remote_model_key
-
         remote_module_class = self.get_class_from_str(module, remote_model)
-
         local_key_value = self.__dict__.get(name_local_key)
 
         if not local_key_value:
@@ -200,8 +203,23 @@ class Base(BaseExecuteSQL, BaseFields):
         fields = self.get_relationship_fields()
 
         for name, description in fields.items():
-            self.__dict__[name] = lambda: self.relationship(
+            self.set_relationship(
                 description.get('model_key'),
                 description.get('local_key'),
+                name,
                 description.get('module'),
             )
+
+    def set_relationship(self, model_key, local_model_key, local_field_name,
+                         module):
+        ''' model_key = 'User.id'
+            local_model_key = 'Message.user_id'
+            local_field_name = 'user'
+            module = 'example_cuttlefish_orm'
+        '''
+        remote_model_str, remote_key = model_key.split('.')
+        local_model_str, local_key = local_model_key.split('.')
+
+        setattr(self.__class__, local_field_name, property(
+            lambda self: self.relationship(model_key, local_key, module)
+        ))

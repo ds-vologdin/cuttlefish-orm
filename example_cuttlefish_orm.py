@@ -18,7 +18,7 @@ class User(Base):
     messages = {
         'type': 'RELATIONSHIP',
         'model_key': 'Message.id',
-        'local_key': 'id',
+        'local_key': 'User.id',
         'module': 'example_cuttlefish_orm',
     }
 
@@ -49,7 +49,7 @@ class Message(Base):
     user = {
         'type': 'RELATIONSHIP',
         'model_key': 'User.id',
-        'local_key': 'user_id',
+        'local_key': 'Message.user_id',
         'module': 'example_cuttlefish_orm',
     }
 
@@ -116,7 +116,8 @@ def main():
 
     # relationship
     print('='*80)
-    messages = user.messages()
+    messages = user.messages
+    print(messages)
     for message in messages:
         print(message.title)
 
@@ -124,11 +125,11 @@ def main():
     value_keys_message = (1,)
     message = Message(connection_db=conn).get(value_keys_message)
     print('message.user_id: {}'.format(message.user_id))
-    print(message.__dict__)
-    user = message.user()
+    user = message.user
     print('user.name: {}'.format(user[0].name))
 
     # exception
+    print('='*80)
     user[0].execute_sql_fetch_one('SELECT * FROM table;')
 
     # drop_table
